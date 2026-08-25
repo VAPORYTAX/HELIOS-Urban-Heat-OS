@@ -1,0 +1,11 @@
+"use client";
+import {Bar,BarChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
+import {H,rows,latest,num,str,money,fmt} from "@/lib/api";import {useLive} from "./useLive";import {Metric,PageTitle,Section} from "./UI";
+export default function InvestmentPage(){
+ const ox=useLive(H.optimizer),ix=useLive(H.interventions);const runs=rows(ox.data),r=latest(ox.data),c=rows(ix.data);
+ const candidates=c.map((x,i)=>({name:str(x,"cell_id","id")||`Action ${i+1}`,Cost:num(x,"cost","estimated_cost")??0,"TEU benefit":num(x,"estimated_teu_benefit","teu_reduction")??0,"VA-TEU benefit":num(x,"estimated_va_teu_benefit","va_teu_reduction")??0})).slice(0,12);
+ return <div className="page"><PageTitle kicker="INVESTMENT MODE · PORTFOLIO OPTIMIZATION" title="Investment Intelligence" description="Move from hotspot detection to budget allocation. HELIOS uses modeled intervention benefits and CP-SAT optimization while preserving uncertainty and review requirements."/>
+ <section className="metrics four"><Metric label="Budget" value={money(num(r,"budget","budget_limit"))}/><Metric label="Selected cost" value={money(num(r,"total_cost","cost"))} accent/><Metric label="Modeled TEU reduction" value={fmt(num(r,"teu_reduction","modeled_teu_reduction"),2)}/><Metric label="Modeled VA-TEU reduction" value={fmt(num(r,"va_teu_reduction","modeled_va_teu_reduction"),2)}/></section>
+ <div className="investment-grid"><Section title="Candidate benefit landscape" eyebrow="COST vs MODELED BENEFIT"><div className="chart-wrap"><ResponsiveContainer width="100%" height={330}><BarChart data={candidates}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="TEU benefit" fill="var(--cyan)"/><Bar dataKey="VA-TEU benefit" fill="var(--acid)"/></BarChart></ResponsiveContainer></div></Section>
+ <Section title="Latest optimization run" eyebrow="DECISION RECORD"><div className="fact-list compact"><div><span>Status</span><b>{str(r,"status")}</b></div><div><span>Selected actions</span><b>{str(r,"selected_count","selected")}</b></div><div><span>Confidence</span><b>{fmt(num(r,"confidence"),2)}</b></div><div><span>Runs stored</span><b>{runs.length}</b></div></div><details className="technical"><summary>Technical optimizer record</summary><pre>{JSON.stringify(r,null,2)}</pre></details></Section></div></div>
+}

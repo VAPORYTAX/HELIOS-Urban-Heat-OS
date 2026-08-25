@@ -1,0 +1,26 @@
+"use client";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import {useEffect,useRef,useState} from "react";
+import {Bar,BarChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
+import {H,num} from "@/lib/api";
+import {PageTitle,Section} from "./UI";
+
+type Pt=[number,number];
+function collect(v:any){const out:any[]=[];const seen=new Set<any>();const walk=(x:any)=>{if(!x||seen.has(x))return;if(typeof x==="object")seen.add(x);if(x?.type==="LineString")out.push(x);if(x?.route_json?.type==="LineString")out.push(x.route_json);if(Array.isArray(x))x.forEach(walk);else if(typeof x==="object")Object.values(x).forEach(walk)};walk(v);return out}
+function findRoutes(v:any):any[]{if(Array.isArray(v))return v;if(v?.fastest&&v?.thermal_safe)return [v.fastest,v.thermal_safe];if(v?.fast&&v?.safe)return [v.fast,v.safe];return Object.values(v??{}).filter((x:any)=>x&&typeof x==="object"&&(x.route_json||x.distance_m||x.thermal_exposure_cost)) as any[]}
+
+export default function ThermalWayPage(){
+ const host=useRef<HTMLDivElement|null>(null),mapRef=useRef<maplibregl.Map|null>(null);
+ const [origin,setOrigin]=useState<Pt|null>(null),[dest,setDest]=useState<Pt|null>(null),[profile,setProfile]=useState("standard");
+ const [result,setResult]=useState<any>(null),[busy,setBusy]=useState(false),[msg,setMsg]=useState("Click the map to set origin, then destination.");
+ useEffect(()=>{if(!host.current||mapRef.current)return;const style:any={version:8,sources:{osm:{type:"raster",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],tileSize:256,attribution:"© OpenStreetMap contributors"}},layers:[{id:"osm",type:"raster",source:"osm"}]};const map=new maplibregl.Map({container:host.current,style,center:[-112.0718,33.4505],zoom:14,attributionControl:false});mapRef.current=map;map.addControl(new maplibregl.NavigationControl(),"top-right");map.addControl(new maplibregl.AttributionControl({compact:true}),"bottom-right");map.on("click",e=>{const p:[number,number]=[e.lngLat.lng,e.lngLat.lat];setOrigin(o=>{if(!o){setDest(null);setResult(null);setMsg("Origin set. Click destination.");return p}setDest(p);setMsg("Destination set. Compare routes.");return o})});return()=>{map.remove();mapRef.current=null}},[]);
+ async function compare(){if(!origin||!dest)return;setBusy(true);setMsg("Computing A* fastest and Dijkstra thermal-safe routes…");try{const r=await H.compare(origin,dest,profile);setResult(r);const ls=collect(r);const fc:any={type:"FeatureCollection",features:ls.map((g,i)=>({type:"Feature",properties:{i},geometry:g}))};const map=mapRef.current!;const src=map.getSource("routes") as maplibregl.GeoJSONSource|undefined;if(src)src.setData(fc);else{map.addSource("routes",{type:"geojson",data:fc});map.addLayer({id:"routes",type:"line",source:"routes",paint:{"line-color":["match",["get","i"],0,"#ff8b4c","#d9ff53"],"line-width":5,"line-opacity":0.94}})}setMsg(`${ls.length} route geometries rendered.`)}catch(e:any){setMsg(e.message)}finally{setBusy(false)}}
+ function reset(){setOrigin(null);setDest(null);setResult(null);setMsg("Click the map to set origin, then destination.");const m=mapRef.current;if(m?.getLayer("routes"))m.removeLayer("routes");if(m?.getSource("routes"))m.removeSource("routes")}
+ const rr=findRoutes(result);const chart=rr.slice(0,2).map((r,i)=>({route:i===0?"Fastest":"Thermal-safe",Minutes:num(r,"duration_min","duration_minutes")??0,TEC:num(r,"thermal_exposure_cost","tec")??0}));
+ return <div className="page"><PageTitle kicker="PLANNING MODE · CLIMATE-SAFE MOBILITY" title="ThermalWay" description="Navigation apps optimize arrival time. HELIOS can optimize modeled thermal exposure using the real OSM network, provider thermal field and traveler vulnerability."/>
+ <div className="tw-layout"><section className="map-card"><div className="route-controls"><select value={profile} onChange={e=>setProfile(e.target.value)}>{["standard","child","older_adult","outdoor_worker","mobility_limited"].map(x=><option key={x}>{x}</option>)}</select><button onClick={compare} disabled={!origin||!dest||busy}>{busy?"Computing…":"Compare routes"}</button><button className="ghost" onClick={reset}>Reset</button></div><div ref={host} className="tw-map"/><div className="map-note">{msg}</div></section>
+ <aside className="route-side"><Section title="Journey setup" eyebrow="TRAVELER PROFILE"><div className="route-points"><div><span>Origin</span><b>{origin?origin.map(x=>x.toFixed(5)).join(", "):"Not set"}</b></div><div><span>Destination</span><b>{dest?dest.map(x=>x.toFixed(5)).join(", "):"Not set"}</b></div></div></Section>
+ <Section title="Route trade-off" eyebrow="FASTEST vs THERMAL-SAFE">{chart.length?<div className="chart-wrap"><ResponsiveContainer width="100%" height={220}><BarChart data={chart}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="route"/><YAxis/><Tooltip/><Bar dataKey="TEC" fill="var(--acid)"/></BarChart></ResponsiveContainer></div>:<p className="muted">Choose an origin and destination to compare route exposure.</p>}</Section></aside></div>
+ {result&&<details className="technical"><summary>View technical route response</summary><pre>{JSON.stringify(result,null,2)}</pre></details>}</div>
+}
