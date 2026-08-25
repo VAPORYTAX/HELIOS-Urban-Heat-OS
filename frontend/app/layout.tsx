@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import "./globals.css";
+import "./decision.css";
 import AppShell from "@/components/AppShell";
 import {DecisionProvider} from "@/components/DecisionContext";
 
