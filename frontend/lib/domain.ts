@@ -3,10 +3,11 @@
 export const API_BASE=process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 const CACHE_PREFIX="helios:last-verified:";
 let snapshotPromise:Promise<any>|null=null;
+const SNAPSHOT_SAFE=(key:string)=>!key.startsWith("/thermalway/compare")&&!key.startsWith("/thermalway/pareto")&&!key.startsWith("/thermalway/safe-haven")&&!key.startsWith("/thermalway/time-optimizer")&&!key.startsWith("/thermalway/exposure-budget");
 
 function cacheKey(key:string){return CACHE_PREFIX+key}
-function writeCache(key:string,data:any){if(typeof window==="undefined")return;try{localStorage.setItem(cacheKey(key),JSON.stringify({captured_at:new Date().toISOString(),data}))}catch{}}
-function readCache(key:string){if(typeof window==="undefined")return null;try{return JSON.parse(localStorage.getItem(cacheKey(key))??"null")}catch{return null}}
+function writeCache(key:string,data:any){if(typeof window==="undefined"||!SNAPSHOT_SAFE(key))return;try{localStorage.setItem(cacheKey(key),JSON.stringify({captured_at:new Date().toISOString(),data}))}catch{}}
+function readCache(key:string){if(typeof window==="undefined"||!SNAPSHOT_SAFE(key))return null;try{return JSON.parse(localStorage.getItem(cacheKey(key))??"null")}catch{return null}}
 async function staticSnapshot(){
  if(typeof window==="undefined")return null;
  if(!snapshotPromise)snapshotPromise=fetch("/data/verified_snapshot.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -29,15 +30,17 @@ export async function get(path:string,params?:Record<string,any>){
   setRuntimeState({mode:"live"});
   return data;
  }catch(err:any){
-  const snap=await staticSnapshot();
-  if(snap?.endpoints&&Object.prototype.hasOwnProperty.call(snap.endpoints,key)){
-   setRuntimeState({mode:"snapshot",snapshotAt:snap.generated_at??null});
-   return snap.endpoints[key];
-  }
-  const cached=readCache(key);
-  if(cached?.data!==undefined){
-   setRuntimeState({mode:"snapshot",snapshotAt:cached.captured_at??null});
-   return cached.data;
+  if(SNAPSHOT_SAFE(key)){
+   const snap=await staticSnapshot();
+   if(snap?.endpoints&&Object.prototype.hasOwnProperty.call(snap.endpoints,key)){
+    setRuntimeState({mode:"snapshot",snapshotAt:snap.generated_at??null});
+    return snap.endpoints[key];
+   }
+   const cached=readCache(key);
+   if(cached?.data!==undefined){
+    setRuntimeState({mode:"snapshot",snapshotAt:cached.captured_at??null});
+    return cached.data;
+   }
   }
   setRuntimeState({mode:"offline"});
   throw err;
@@ -72,6 +75,10 @@ export const E={
  accessibility:()=>get("/thermalway/accessibility"),
  journeys:()=>get("/thermalway/critical-journeys"),
  compare:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/compare",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,area_id:"phx-downtown"}),
+ pareto:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/pareto",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,k:5}),
+ safeHaven:(o:[number,number],profile:string)=>get("/thermalway/safe-haven",{origin_lon:o[0],origin_lat:o[1],profile}),
+ timeOptimizer:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/time-optimizer",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile}),
+ exposureBudget:(o:[number,number],d:[number,number],profile:string,budget?:number)=>get("/thermalway/exposure-budget",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,thermal_budget:budget}),
  ask:(query:string)=>post("/intelligence/query",{area_id:"phx-downtown",query,mode:"investment",task_type:"portfolio_optimization",force_thinking:false,token_budget:7000})
 };
 
@@ -96,6 +103,7 @@ export function latest(v:any){
 }
 export function providerOptimizer(v:any){
  const a=arr(v);
+ if(!a.length&&v&&typeof v==="object")return v;
  const ranked=[...a].sort((x,y)=>{
    const score=(z:any)=>(n(z,"teu_reduction","modeled_teu_reduction")!==null?10:0)+(n(z,"va_teu_reduction","modeled_va_teu_reduction")!==null?10:0)+(s(z,"status")==="optimal"?3:0)+(n(z,"confidence")!==null?2:0)+(n(z,"total_cost")===99000?1:0);
    return score(y)-score(x)
