@@ -1,0 +1,43 @@
+name: HELIOS Frontend Production Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Next.js production bundle
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_HELIOS_API_BASE: /api/helios
+          HELIOS_BACKEND_URL: http://127.0.0.1:8080/api/v1
+        run: npm run build
+      - name: Assert browser source has no direct backend URL
+        run: |
+          if grep -R -n -E 'http://(127\.0\.0\.1|localhost):8080' app components lib --include='*.ts' --include='*.tsx' | grep -v 'app/api/helios/'; then
+            echo 'Direct backend URL found in browser-facing source.'
+            exit 1
+          fi
+          echo 'PASS: no direct browser backend URL found.'
