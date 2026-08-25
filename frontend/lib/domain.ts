@@ -23,6 +23,7 @@ export const E={
  cells:()=>get("/spatial/cells",{area_id:"phx-downtown"}),
  interventions:()=>get("/interventions/provider-native/candidates",{area_id:"phx-downtown"}),
  optimizer:()=>get("/optimizer/provider-native/latest",{area_id:"phx-downtown"}),
+ decisionScience:()=>get("/decision-science/latest",{area_id:"phx-downtown"}),
  quality:()=>get("/quality/latest",{area_id:"phx-downtown"}),
  packets:()=>get("/context/packets",{area_id:"phx-downtown"}),
  accessibility:()=>get("/thermalway/accessibility"),
@@ -63,5 +64,3 @@ export function fmt(x:number|null,d=2){return x==null?"—":x.toFixed(d)}
 export function labelAction(x:any){
  return s(x,"intervention_type","type","name","action","catalog_name","intervention_name");
 }
-
-
