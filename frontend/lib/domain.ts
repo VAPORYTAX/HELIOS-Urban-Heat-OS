@@ -3,7 +3,7 @@
 export const API_BASE=process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 const CACHE_PREFIX="helios:last-verified:";
 let snapshotPromise:Promise<any>|null=null;
-const SNAPSHOT_SAFE=(key:string)=>!key.startsWith("/thermalway/compare")&&!key.startsWith("/thermalway/pareto")&&!key.startsWith("/thermalway/safe-haven")&&!key.startsWith("/thermalway/time-optimizer")&&!key.startsWith("/thermalway/exposure-budget");
+const SNAPSHOT_SAFE=(key:string)=>!key.startsWith("/thermalway/compare")&&!key.startsWith("/thermalway/route")&&!key.startsWith("/thermalway/pareto")&&!key.startsWith("/thermalway/safe-haven")&&!key.startsWith("/thermalway/time-optimizer")&&!key.startsWith("/thermalway/exposure-budget");
 
 function cacheKey(key:string){return CACHE_PREFIX+key}
 function writeCache(key:string,data:any){if(typeof window==="undefined"||!SNAPSHOT_SAFE(key))return;try{localStorage.setItem(cacheKey(key),JSON.stringify({captured_at:new Date().toISOString(),data}))}catch{}}
@@ -68,7 +68,9 @@ export const E={
  packets:()=>get("/context/packets",{area_id:"phx-downtown"}),
  accessibility:()=>get("/thermalway/accessibility"),
  journeys:()=>get("/thermalway/critical-journeys"),
+ thermalModes:()=>get("/thermalway/modes"),
  compare:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/compare",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,area_id:"phx-downtown"}),
+ routeMode:(o:[number,number],d:[number,number],profile:string,mode:"fastest"|"cool"|"warm"|"thermal_safe")=>get("/thermalway/route",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,mode}),
  pareto:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/pareto",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile,k:5}),
  safeHaven:(o:[number,number],profile:string)=>get("/thermalway/safe-haven",{origin_lon:o[0],origin_lat:o[1],profile}),
  timeOptimizer:(o:[number,number],d:[number,number],profile:string)=>get("/thermalway/time-optimizer",{origin_lon:o[0],origin_lat:o[1],dest_lon:d[0],dest_lat:d[1],profile}),
@@ -79,15 +81,15 @@ export const E={
 export function arr(v:any):any[]{
  if(Array.isArray(v)) return v;
  if(!v||typeof v!=="object") return [];
- for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys","checks","recommended_actions"]) if(Array.isArray(v[k])) return v[k];
+ for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys","checks","recommended_actions","modes"]) if(Array.isArray(v[k])) return v[k];
  return [];
 }
 export function n(v:any,...keys:string[]):number|null{
  for(const k of keys){const x=Number(v?.[k]);if(Number.isFinite(x))return x}
  return null;
 }
-export function s(v:any,...keys:any[]):string{
- for(const k of keys) if(typeof k==="string"&&v?.[k]!==undefined&&v?.[k]!==null&&String(v[k]).trim()) return String(v[k]);
+export function s(v:any,...keys:string[]):string{
+ for(const k of keys) if(v?.[k]!==undefined&&v?.[k]!==null&&String(v[k]).trim()) return String(v[k]);
  return "—";
 }
 export function latest(v:any){
