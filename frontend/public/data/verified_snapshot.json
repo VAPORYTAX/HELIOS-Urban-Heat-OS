@@ -1,0 +1,8 @@
+{
+  "schema": "helios_verified_snapshot_v1",
+  "generated_at": null,
+  "area_id": "phx-downtown",
+  "status": "not_captured",
+  "note": "Populate with scripts/Export-JudgingSnapshot.ps1 while the validated local HELIOS backend is healthy. Empty snapshots are never presented as live data.",
+  "endpoints": {}
+}
