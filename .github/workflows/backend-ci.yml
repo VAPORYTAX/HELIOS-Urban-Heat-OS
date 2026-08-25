@@ -1,0 +1,67 @@
+name: HELIOS Backend Cloud Readiness
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "migrations/**"
+      - "pyproject.toml"
+      - "alembic.ini"
+      - "Dockerfile"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "migrations/**"
+      - "pyproject.toml"
+      - "alembic.ini"
+      - "Dockerfile"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgis:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: helios
+          POSTGRES_USER: helios
+          POSTGRES_PASSWORD: helios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U helios -d helios"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql+psycopg://helios:helios@127.0.0.1:5432/helios
+      HELIOS_ENV: test
+      GEMMA_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install HELIOS runtime and test dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Apply database migrations
+        run: alembic upgrade head
+
+      - name: Import application
+        run: python -c "import app.main; print('HELIOS import OK')"
+
+      - name: Run backend regression suite
+        run: pytest -q
+
+      - name: Build production backend image
+        run: docker build -t helios-backend:ci .
