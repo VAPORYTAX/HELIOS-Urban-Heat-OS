@@ -1,4 +1,17 @@
-﻿export const API_BASE=process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
+﻿import {setRuntimeState} from "./runtime";
+
+export const API_BASE=process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
+const CACHE_PREFIX="helios:last-verified:";
+let snapshotPromise:Promise<any>|null=null;
+
+function cacheKey(key:string){return CACHE_PREFIX+key}
+function writeCache(key:string,data:any){if(typeof window==="undefined")return;try{localStorage.setItem(cacheKey(key),JSON.stringify({captured_at:new Date().toISOString(),data}))}catch{}}
+function readCache(key:string){if(typeof window==="undefined")return null;try{return JSON.parse(localStorage.getItem(cacheKey(key))??"null")}catch{return null}}
+async function staticSnapshot(){
+ if(typeof window==="undefined")return null;
+ if(!snapshotPromise)snapshotPromise=fetch("/data/verified_snapshot.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+ return snapshotPromise;
+}
 
 export async function get(path:string,params?:Record<string,any>){
  const qs=new URLSearchParams();
@@ -6,15 +19,40 @@ export async function get(path:string,params?:Record<string,any>){
    if(v!==undefined&&v!==null) qs.set(k,String(v));
  }
  const query=qs.toString();
- const url=`${API_BASE}${path}${query?`?${query}`:""}`;
- const r=await fetch(url,{cache:"no-store"});
- if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${path}`);
- return r.json();
+ const key=`${path}${query?`?${query}`:""}`;
+ const url=`${API_BASE}${key}`;
+ try{
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${path}`);
+  const data=await r.json();
+  writeCache(key,data);
+  setRuntimeState({mode:"live"});
+  return data;
+ }catch(err:any){
+  const snap=await staticSnapshot();
+  if(snap?.endpoints&&Object.prototype.hasOwnProperty.call(snap.endpoints,key)){
+   setRuntimeState({mode:"snapshot",snapshotAt:snap.generated_at??null});
+   return snap.endpoints[key];
+  }
+  const cached=readCache(key);
+  if(cached?.data!==undefined){
+   setRuntimeState({mode:"snapshot",snapshotAt:cached.captured_at??null});
+   return cached.data;
+  }
+  setRuntimeState({mode:"offline"});
+  throw err;
+ }
 }
 export async function post(path:string,body:any){
- const r=await fetch(`${API_BASE}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
- if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${(await r.text()).slice(0,400)}`);
- return r.json();
+ try{
+  const r=await fetch(`${API_BASE}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${(await r.text()).slice(0,400)}`);
+  setRuntimeState({mode:"live"});
+  return r.json();
+ }catch(err){
+  setRuntimeState({mode:"offline"});
+  throw err;
+ }
 }
 export const E={
  system:()=>get("/system/status"),
