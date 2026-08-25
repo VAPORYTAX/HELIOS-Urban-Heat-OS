@@ -11,9 +11,13 @@ from app.thermalway.profile_rules import edge_allowed_for_profile, profile_edge_
 
 PROFILE_MULT={"standard":1.0,"child":1.15,"older_adult":1.30,"outdoor_worker":1.20,"mobility_limited":1.25}
 WALK_MPS=1.25
+COMFORT_LOW_C=18.0
+COMFORT_HIGH_C=26.0
+
 
 def _nearest(nodes,lon,lat):
     return min(nodes,key=lambda n:(n[1]-lon)**2+(n[2]-lat)**2)[0]
+
 
 def _edge_cell(edge_geom,cells):
     mid=edge_geom.interpolate(.5,normalized=True)
@@ -21,25 +25,57 @@ def _edge_cell(edge_geom,cells):
         if g.contains(mid) or g.touches(mid):return cid
     return None
 
-def _tec(edge,metric,profile):
+
+def _multipliers(edge,metric,profile):
+    vulnerability=1.0+(metric.vulnerability_index*0.75 if metric else 0.0)
+    prof=PROFILE_MULT.get(profile,1.0)
+    uncertainty=1.0+((1.0-metric.confidence)*0.5 if metric else 0.25)
+    covered=(edge.covered or "").lower() in {"yes","true","1"}
+    return vulnerability,prof,uncertainty,covered
+
+
+def _heat_tec(edge,metric,profile):
     duration=edge.length_m/WALK_MPS
     if not metric:
         return duration*0.15
-    heat=max(0.0,min(1.0,(metric.current_c-25.0)/20.0))
-    vuln=1.0+metric.vulnerability_index*0.75
-    prof=PROFILE_MULT.get(profile,1.0)
-    uncertainty=1.0+(1.0-metric.confidence)*0.5
-    shade=.75 if (edge.covered or "").lower() in {"yes","true","1"} else 1.0
-    return heat*duration*vuln*prof*uncertainty*shade
+    heat=max(0.0,min(1.5,(metric.current_c-COMFORT_HIGH_C)/18.0))
+    vulnerability,prof,uncertainty,covered=_multipliers(edge,metric,profile)
+    shade=.75 if covered else 1.0
+    return heat*duration*vulnerability*prof*uncertainty*shade
+
+
+def _cold_tec(edge,metric,profile):
+    duration=edge.length_m/WALK_MPS
+    if not metric:
+        return 0.0
+    cold=max(0.0,min(1.5,(COMFORT_LOW_C-metric.current_c)/18.0))
+    vulnerability,prof,uncertainty,covered=_multipliers(edge,metric,profile)
+    # Covered/shaded segments can retain less solar warming; this is a transparent
+    # routing assumption, not an observed radiant-temperature measurement.
+    solar_warmth=.85 if not covered else 1.0
+    return cold*duration*vulnerability*prof*uncertainty*solar_warmth
+
+
+def _tec(edge,metric,profile):
+    """Backward-compatible heat TEC used by existing analytics."""
+    return _heat_tec(edge,metric,profile)
+
 
 def _cost(edge,metric,profile,mode):
     duration=edge.length_m/WALK_MPS
-    tec=_tec(edge,metric,profile)
+    heat=_heat_tec(edge,metric,profile)
+    cold=_cold_tec(edge,metric,profile)
     if mode=="fastest":
-        return duration,tec
+        return duration,heat
+    if mode=="cool":
+        return duration+3.0*heat,heat
+    if mode=="warm":
+        return duration+3.0*cold,cold
     if mode=="thermal_safe":
-        return duration+3.0*tec,tec
+        thermal_stress=max(heat,cold)
+        return duration+3.0*thermal_stress,thermal_stress
     raise ValueError(f"Unsupported route mode: {mode}")
+
 
 def route(db,origin_lon,origin_lat,dest_lon,dest_lat,mode="thermal_safe",profile="standard",area_id="phx-downtown",algorithm="auto"):
     ns=db.execute(select(ThermalWayOSMNode)).scalars().all()
@@ -96,11 +132,18 @@ def route(db,origin_lon,origin_lat,dest_lon,dest_lat,mode="thermal_safe",profile
         area_id=area_id,mode=mode,traveler_profile=profile,
         origin_json={"requested":[origin_lon,origin_lat],"snapped_node":start,"snapped":[*coords[start]]},
         destination_json={"requested":[dest_lon,dest_lat],"snapped_node":goal,"snapped":[*coords[goal]]},
-        route_json={"type":"LineString","coordinates":line,"fingerprint":fingerprints,"algorithm":chosen},
+        route_json={"type":"LineString","coordinates":line,"fingerprint":fingerprints,"algorithm":chosen,
+                    "mode_definition":{
+                        "fastest":"minimize travel time",
+                        "cool":"minimize modeled cumulative heat exposure",
+                        "warm":"minimize modeled cumulative cold exposure",
+                        "thermal_safe":"minimize modeled thermal stress"
+                    }.get(mode)},
         distance_m=total_m,duration_min=duration_min,thermal_exposure_cost=total_tec,
         confidence=conf,truth_category="real_osm_provider_thermal_modelled_cost")
     db.add(rr);db.commit();db.refresh(rr)
     return rr
+
 
 def compare(db,origin_lon,origin_lat,dest_lon,dest_lat,profile="standard",area_id="phx-downtown"):
     fast=route(db,origin_lon,origin_lat,dest_lon,dest_lat,"fastest",profile,area_id)
