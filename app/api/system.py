@@ -27,17 +27,11 @@ def system_status(request: Request):
     gemma = gemma_readiness()
     route_count = len(request.app.routes)
 
-    # HELIOS deterministic/spatial decision engines are operational when the
-    # database is healthy. Gemma is an optional explanation/orchestration
-    # layer and must never become a single point of failure for core truth.
-    overall = "ready" if db_ok else "degraded"
-    intelligence_state = (
-        "ready"
-        if gemma.get("enabled") and gemma.get("reachable")
-        else "unavailable"
-        if gemma.get("enabled")
-        else "disabled"
-    )
+    # Gemma is an optional explanation/orchestration layer. Deterministic
+    # spatial and numerical engines remain production-ready when it is
+    # intentionally disabled.
+    intelligence_ready = not gemma.get("enabled", False) or gemma.get("reachable", False)
+    overall = "ready" if db_ok and intelligence_ready else "degraded"
 
     return {
         "status": overall,
@@ -50,13 +44,10 @@ def system_status(request: Request):
         "intelligence": {
             "enabled": gemma.get("enabled", False),
             "reachable": gemma.get("reachable", False),
-            "state": intelligence_state,
             "model": gemma.get("model"),
-            "fast_transport": "lmstudio_native" if gemma.get("reachable") else None,
+            "fast_transport": "lmstudio_native",
             "fast_reasoning": "off",
             "firewall": "enabled",
-            "role": "explanation_and_orchestration_only",
-            "core_decision_engines_depend_on_ai": False,
         },
         "api": {
             "route_count": route_count,
@@ -82,7 +73,7 @@ def capabilities():
             "portfolio_optimizer": True,
             "governed_agents": True,
             "contextforge": True,
-            "gemma4": True,
+            "gemma4": gemma_readiness().get("enabled", False),
             "thermalway": True,
             "thermal_accessibility": True,
             "critical_journeys": True,
@@ -90,7 +81,6 @@ def capabilities():
         },
         "thermalway": {
             "algorithms": ["astar", "dijkstra", "yen_k_shortest"],
-            "modes": ["fastest", "cool", "warm", "thermal_safe"],
             "profiles": [
                 "standard",
                 "child",

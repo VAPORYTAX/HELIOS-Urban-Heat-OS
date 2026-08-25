@@ -1,8 +1,6 @@
 from functools import lru_cache
-
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -28,14 +26,13 @@ class Settings(BaseSettings):
 
     @field_validator("database_url", mode="before")
     @classmethod
-    def normalize_database_url(cls, value: str) -> str:
-        """Use psycopg v3 for cloud providers that expose postgresql:// URLs."""
+    def use_psycopg3(cls, value: str) -> str:
+        """Make provider-style PostgreSQL URLs select the installed psycopg 3 driver."""
         if isinstance(value, str) and value.startswith("postgresql://"):
-            return "postgresql+psycopg://" + value[len("postgresql://") :]
+            return value.replace("postgresql://", "postgresql+psycopg://", 1)
         if isinstance(value, str) and value.startswith("postgres://"):
-            return "postgresql+psycopg://" + value[len("postgres://") :]
+            return value.replace("postgres://", "postgresql+psycopg://", 1)
         return value
-
 
 @lru_cache
 def get_settings() -> Settings:
