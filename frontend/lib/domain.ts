@@ -27,35 +27,29 @@ export async function get(path:string,params?:Record<string,any>){
   if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${path}`);
   const data=await r.json();
   writeCache(key,data);
-  setRuntimeState({mode:"live"});
+  if(path==="/system/status")setRuntimeState({mode:"live"});
   return data;
  }catch(err:any){
   if(SNAPSHOT_SAFE(key)){
    const snap=await staticSnapshot();
-   if(snap?.endpoints&&Object.prototype.hasOwnProperty.call(snap.endpoints,key)){
-    setRuntimeState({mode:"snapshot",snapshotAt:snap.generated_at??null});
+   if(snap?.status==="verified_snapshot"&&snap?.endpoints&&Object.prototype.hasOwnProperty.call(snap.endpoints,key)){
+    if(path==="/system/status")setRuntimeState({mode:"snapshot",snapshotAt:snap.generated_at??null});
     return snap.endpoints[key];
    }
    const cached=readCache(key);
    if(cached?.data!==undefined){
-    setRuntimeState({mode:"snapshot",snapshotAt:cached.captured_at??null});
+    if(path==="/system/status")setRuntimeState({mode:"snapshot",snapshotAt:cached.captured_at??null});
     return cached.data;
    }
   }
-  setRuntimeState({mode:"offline"});
+  if(path==="/system/status")setRuntimeState({mode:"offline"});
   throw err;
  }
 }
 export async function post(path:string,body:any){
- try{
-  const r=await fetch(`${API_BASE}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${(await r.text()).slice(0,400)}`);
-  setRuntimeState({mode:"live"});
-  return r.json();
- }catch(err){
-  setRuntimeState({mode:"offline"});
-  throw err;
- }
+ const r=await fetch(`${API_BASE}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+ if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${(await r.text()).slice(0,400)}`);
+ return r.json();
 }
 export const E={
  system:()=>get("/system/status"),
@@ -85,15 +79,15 @@ export const E={
 export function arr(v:any):any[]{
  if(Array.isArray(v)) return v;
  if(!v||typeof v!=="object") return [];
- for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys","checks"]) if(Array.isArray(v[k])) return v[k];
+ for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys","checks","recommended_actions"]) if(Array.isArray(v[k])) return v[k];
  return [];
 }
 export function n(v:any,...keys:string[]):number|null{
  for(const k of keys){const x=Number(v?.[k]);if(Number.isFinite(x))return x}
  return null;
 }
-export function s(v:any,...keys:string[]):string{
- for(const k of keys) if(v?.[k]!==undefined&&v?.[k]!==null&&String(v[k]).trim()) return String(v[k]);
+export function s(v:any,...keys:any[]):string{
+ for(const k of keys) if(typeof k==="string"&&v?.[k]!==undefined&&v?.[k]!==null&&String(v[k]).trim()) return String(v[k]);
  return "—";
 }
 export function latest(v:any){
