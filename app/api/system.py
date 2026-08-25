@@ -27,7 +27,17 @@ def system_status(request: Request):
     gemma = gemma_readiness()
     route_count = len(request.app.routes)
 
-    overall = "ready" if db_ok and gemma.get("reachable") else "degraded"
+    # HELIOS deterministic/spatial decision engines are operational when the
+    # database is healthy. Gemma is an optional explanation/orchestration
+    # layer and must never become a single point of failure for core truth.
+    overall = "ready" if db_ok else "degraded"
+    intelligence_state = (
+        "ready"
+        if gemma.get("enabled") and gemma.get("reachable")
+        else "unavailable"
+        if gemma.get("enabled")
+        else "disabled"
+    )
 
     return {
         "status": overall,
@@ -40,10 +50,13 @@ def system_status(request: Request):
         "intelligence": {
             "enabled": gemma.get("enabled", False),
             "reachable": gemma.get("reachable", False),
+            "state": intelligence_state,
             "model": gemma.get("model"),
-            "fast_transport": "lmstudio_native",
+            "fast_transport": "lmstudio_native" if gemma.get("reachable") else None,
             "fast_reasoning": "off",
             "firewall": "enabled",
+            "role": "explanation_and_orchestration_only",
+            "core_decision_engines_depend_on_ai": False,
         },
         "api": {
             "route_count": route_count,
@@ -77,6 +90,7 @@ def capabilities():
         },
         "thermalway": {
             "algorithms": ["astar", "dijkstra", "yen_k_shortest"],
+            "modes": ["fastest", "cool", "warm", "thermal_safe"],
             "profiles": [
                 "standard",
                 "child",
