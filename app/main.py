@@ -21,6 +21,7 @@ from app.api.provider_ops import router as provider_ops_router
 from app.api.thermalway import router as thermalway_router
 from app.api.thermalway_intelligence import router as thermalway_intelligence_router
 from app.api.thermalway_accessibility import router as thermalway_accessibility_router
+from app.api.decision_science import router as decision_science_router
 from app.api.system import router as system_router
 from app.api.spatial import router as spatial_router
 from app.config import get_settings
@@ -67,6 +68,7 @@ app.include_router(provider_ops_router, prefix=settings.helios_api_prefix)
 app.include_router(thermalway_router, prefix=settings.helios_api_prefix)
 app.include_router(thermalway_intelligence_router, prefix=settings.helios_api_prefix)
 app.include_router(thermalway_accessibility_router, prefix=settings.helios_api_prefix)
+app.include_router(decision_science_router, prefix=settings.helios_api_prefix)
 app.include_router(system_router, prefix=settings.helios_api_prefix)
 app.include_router(spatial_router, prefix=settings.helios_api_prefix)
 
