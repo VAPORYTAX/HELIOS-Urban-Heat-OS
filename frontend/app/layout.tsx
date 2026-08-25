@@ -6,6 +6,7 @@ import "./labs.css";
 import "./runtime.css";
 import "./thermalway-intel.css";
 import "./thermal-history.css";
+import "./claim-inspector.css";
 import "./system-readiness.css";
 import AppShell from "@/components/AppShell";
 import {DecisionProvider} from "@/components/DecisionContext";
