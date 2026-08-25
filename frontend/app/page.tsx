@@ -1,1 +1,1 @@
-import CommandFinal from "@/components/CommandFinal";export default function Page(){return <CommandFinal/>}
+import CommandReady from "@/components/CommandReady";export default function Page(){return <CommandReady/>}

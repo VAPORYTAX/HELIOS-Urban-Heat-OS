@@ -1,1 +1,1 @@
-import InterventionsReady from "@/components/InterventionsReady";export default function Page(){return <InterventionsReady/>}
+import InterventionsPolished from "@/components/InterventionsPolished";export default function Page(){return <InterventionsPolished/>}

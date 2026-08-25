@@ -34,7 +34,7 @@ export const E={
 export function arr(v:any):any[]{
  if(Array.isArray(v)) return v;
  if(!v||typeof v!=="object") return [];
- for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys"]) if(Array.isArray(v[k])) return v[k];
+ for(const k of ["items","results","data","metrics","cells","runs","candidates","records","facilities","journeys","checks"]) if(Array.isArray(v[k])) return v[k];
  return [];
 }
 export function n(v:any,...keys:string[]):number|null{

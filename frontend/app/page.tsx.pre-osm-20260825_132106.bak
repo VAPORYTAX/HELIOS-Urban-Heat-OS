@@ -1,2 +1,0 @@
-import LiveDomains from "@/components/LiveDomains";
-export default function Page(){return <LiveDomains/>}

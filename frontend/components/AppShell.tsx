@@ -4,16 +4,17 @@ import {usePathname} from "next/navigation";
 import {Activity,BrainCircuit,CircleDollarSign,Database,Home,Layers3,Route,ShieldCheck,ThermometerSun} from "lucide-react";
 import {E} from "@/lib/domain";
 import {useLive} from "./useLive";
+import JudgeTour from "./JudgeTour";
 
 const NAV=[
   ["/","Command","Command",Home],
-  ["/atlas","Planning","Thermal Atlas",ThermometerSun],
-  ["/thermalway","Planning","ThermalWay",Route],
-  ["/interventions","Design","Interventions",Layers3],
-  ["/investment","Investment","Portfolio",CircleDollarSign],
-  ["/evidence","Evidence","Evidence",ShieldCheck],
-  ["/ai","Command","HELIOS AI",BrainCircuit],
-  ["/system","Evidence","System",Database],
+  ["/atlas","Observe + Diagnose","Thermal Atlas",ThermometerSun],
+  ["/interventions","Act","Interventions",Layers3],
+  ["/investment","Optimize","Portfolio",CircleDollarSign],
+  ["/thermalway","Protect","ThermalWay",Route],
+  ["/ai","Explain","HELIOS AI",BrainCircuit],
+  ["/evidence","Verify","Evidence",ShieldCheck],
+  ["/system","Readiness","System",Database],
 ] as const;
 
 export default function AppShell({children}:{children:React.ReactNode}){
@@ -34,14 +35,16 @@ export default function AppShell({children}:{children:React.ReactNode}){
       <div className="side-foot">
         <div><ShieldCheck size={15}/><b>Truth firewall active</b></div>
         <p>Provider, derived, modeled, optimized and LLM-explained outputs remain explicitly separated.</p>
+        <small>OBSERVE → DIAGNOSE → ACT → OPTIMIZE → PROTECT → EXPLAIN → VERIFY</small>
       </div>
     </aside>
     <section className="main">
       <header className="topbar">
         <div className="context"><span>PHX-DOWNTOWN</span><b>Decision Environment</b></div>
-        <div className="top-status"><span className={backendReady?"":"offline"}><i/> {runtime.loading?"CHECKING BACKEND":backendReady?"LIVE BACKEND":"BACKEND UNAVAILABLE"}</span><span>HUMAN REVIEW GATE</span></div>
+        <div className="top-status"><span className={backendReady?"":"offline"}><i/> {runtime.loading?"CHECKING BACKEND":backendReady?"LIVE BACKEND":"BACKEND UNAVAILABLE"}</span><span>TRUTH FIREWALL</span><span>HUMAN REVIEW GATE</span></div>
       </header>
       {children}
+      <JudgeTour/>
     </section>
   </div>
 }

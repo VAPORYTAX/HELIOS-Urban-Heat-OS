@@ -1,1 +1,1 @@
-import EvidenceFinal from "@/components/EvidenceFinal";export default function Page(){return <EvidenceFinal/>}
+import EvidenceReady from "@/components/EvidenceReady";export default function Page(){return <EvidenceReady/>}

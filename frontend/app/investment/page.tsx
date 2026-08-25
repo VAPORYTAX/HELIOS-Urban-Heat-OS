@@ -1,1 +1,1 @@
-import InvestmentFinal from "@/components/InvestmentFinal";export default function Page(){return <InvestmentFinal/>}
+import InvestmentReady from "@/components/InvestmentReady";export default function Page(){return <InvestmentReady/>}

@@ -1,1 +1,1 @@
-import AIFinal from "@/components/AIFinal";export default function Page(){return <AIFinal/>}
+import AIPolished from "@/components/AIPolished";export default function Page(){return <AIPolished/>}
