@@ -1,5 +1,5 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "http://127.0.0.1:8080/api/v1";
+﻿export const API_BASE =
+  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 
 export async function apiGet(path:string, params?:Record<string,string|number|boolean|undefined>){
   const u=new URL(`${API_BASE}${path}`);
@@ -63,10 +63,11 @@ export function num(v:any,...keys:string[]):number|null{
 }
 export function str(v:any,...keys:string[]):string{
   for(const k of keys)if(v?.[k]!==undefined&&v?.[k]!==null)return String(v[k]);
-  return "—";
+  return "â€”";
 }
 export function latest(v:any):any{
   const r=rows(v); return r[0]??v??{};
 }
-export function fmt(v:number|null,d=1){return v==null?"—":v.toFixed(d)}
-export function money(v:number|null){return v==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(v)}
+export function fmt(v:number|null,d=1){return v==null?"â€”":v.toFixed(d)}
+export function money(v:number|null){return v==null?"â€”":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(v)}
+

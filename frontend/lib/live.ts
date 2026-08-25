@@ -1,5 +1,5 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "http://127.0.0.1:8080/api/v1";
+﻿export const API_BASE =
+  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
@@ -30,3 +30,4 @@ export const live = {
   accessibility: () => apiGet("/thermalway/accessibility"),
   criticalJourneys: () => apiGet("/thermalway/critical-journeys"),
 };
+

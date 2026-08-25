@@ -1,5 +1,5 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "http://127.0.0.1:8080/api/v1";
+﻿export const API_BASE =
+  process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 
 export async function apiGet(path:string, params?:Record<string,string|number|boolean|undefined>){
   const u=new URL(`${API_BASE}${path}`);
@@ -27,3 +27,4 @@ export const helios={
     task_type:"portfolio_optimization",force_thinking:false,token_budget:7000
   }),
 };
+
