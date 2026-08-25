@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import {usePathname} from "next/navigation";
+import {useEffect,useState} from "react";
 import {Activity,BrainCircuit,CircleDollarSign,Database,Home,Layers3,Route,ShieldCheck,ThermometerSun} from "lucide-react";
 import {E} from "@/lib/domain";
+import {readRuntimeState,type HeliosRuntimeState} from "@/lib/runtime";
 import {useLive} from "./useLive";
 import JudgeTour from "./JudgeTour";
 import ExecutiveBrief from "./ExecutiveBrief";
@@ -23,8 +25,11 @@ export default function AppShell({children}:{children:React.ReactNode}){
   const path=usePathname();
   const runtime=useLive(E.system);
   const {activeCellId}=useDecision();
+  const [source,setSource]=useState<HeliosRuntimeState>({mode:"checking"});
+  useEffect(()=>{setSource(readRuntimeState());const h=(e:Event)=>setSource((e as CustomEvent<HeliosRuntimeState>).detail);window.addEventListener("helios:runtime-state",h);return()=>window.removeEventListener("helios:runtime-state",h)},[]);
   const backendReady=!runtime.loading&&!runtime.error&&!!(runtime.data as any)?.database?.ready;
-  const mode=runtime.loading?"CHECKING BACKEND":backendReady?"LIVE BACKEND":"BACKEND UNAVAILABLE";
+  const mode=source.mode==="snapshot"?"VERIFIED SNAPSHOT":source.mode==="offline"?"BACKEND UNAVAILABLE":runtime.loading?"CHECKING BACKEND":backendReady?"LIVE BACKEND":"BACKEND UNAVAILABLE";
+  const modeClass=source.mode==="snapshot"?"snapshot":backendReady?"":"offline";
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand">
@@ -45,8 +50,9 @@ export default function AppShell({children}:{children:React.ReactNode}){
     <section className="main">
       <header className="topbar">
         <div className="context"><span>PHX-DOWNTOWN</span><b>Decision Environment</b><em>ACTIVE DECISION · {activeCellId??"AUTO-SELECTING"}</em></div>
-        <div className="top-status"><span className={backendReady?"":"offline"}><i/> {mode}</span><span>TRUTH FIREWALL</span><span>HUMAN REVIEW GATE</span><ExecutiveBrief/></div>
+        <div className="top-status"><span className={modeClass}><i/> {mode}{source.mode==="snapshot"&&source.snapshotAt?<small> · {new Date(source.snapshotAt).toLocaleString()}</small>:null}</span><span>TRUTH FIREWALL</span><span>HUMAN REVIEW GATE</span><ExecutiveBrief/></div>
       </header>
+      {source.mode==="snapshot"&&<div className="snapshot-banner"><b>VERIFIED SNAPSHOT — LIVE COMPUTE UNAVAILABLE</b><span>Read-only last-validated evidence is being shown. New AI queries, route calculations and fresh optimization are not represented as live.</span></div>}
       {children}
       <JudgeTour/>
     </section>
