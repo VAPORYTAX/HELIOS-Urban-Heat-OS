@@ -27,12 +27,16 @@ Capture '/system/status' '/system/status'
 Capture '/system/capabilities' '/system/capabilities'
 Capture '/provider-ops/metrics' '/provider-ops/metrics'
 Capture '/spatial/cells?area_id=phx-downtown' '/spatial/cells?area_id=phx-downtown'
+Capture '/fortyguard/history/baselines?area_id=phx-downtown' '/fortyguard/history/baselines?area_id=phx-downtown'
+Capture '/fortyguard/history/stress?area_id=phx-downtown' '/fortyguard/history/stress?area_id=phx-downtown'
+Capture '/thermal/hotspots?area_id=phx-downtown' '/thermal/hotspots?area_id=phx-downtown'
 Capture '/interventions/provider-native/candidates?area_id=phx-downtown' '/interventions/provider-native/candidates?area_id=phx-downtown'
 Capture '/optimizer/provider-native/latest?area_id=phx-downtown' '/optimizer/provider-native/latest?area_id=phx-downtown'
 Capture '/quality/latest?area_id=phx-downtown' '/quality/latest?area_id=phx-downtown'
 Capture '/context/packets?area_id=phx-downtown' '/context/packets?area_id=phx-downtown'
 Capture '/thermalway/accessibility' '/thermalway/accessibility'
 Capture '/thermalway/critical-journeys' '/thermalway/critical-journeys'
+Capture '/thermalway/modes' '/thermalway/modes'
 Capture '/scenarios?area_id=phx-downtown' '/scenarios?area_id=phx-downtown'
 
 try { Capture '/decision-science/latest?area_id=phx-downtown' '/decision-science/latest?area_id=phx-downtown' } catch { Write-Warning 'Decision science snapshot unavailable; leaving it out.' }
@@ -53,6 +57,7 @@ $payload = [ordered]@{
   area_id='phx-downtown'
   status='verified_snapshot'
   note='Read-only capture from a locally verified HELIOS backend. Never claim this snapshot is live compute.'
+  dynamic_compute_excluded=@('Gemma queries','new route calculations','Pareto routing','safe-haven routing','exposure-budget routing','fresh optimization jobs')
   endpoints=$endpoints
 }
 
