@@ -1,9 +1,13 @@
 ﻿export const API_BASE=process.env.NEXT_PUBLIC_HELIOS_API_BASE ?? "/api/helios";
 
 export async function get(path:string,params?:Record<string,any>){
- const u=new URL(`${API_BASE}${path}`);
- for(const [k,v] of Object.entries(params??{})) if(v!==undefined&&v!==null) u.searchParams.set(k,String(v));
- const r=await fetch(u.toString(),{cache:"no-store"});
+ const qs=new URLSearchParams();
+ for(const [k,v] of Object.entries(params??{})){
+   if(v!==undefined&&v!==null) qs.set(k,String(v));
+ }
+ const query=qs.toString();
+ const url=`${API_BASE}${path}${query?`?${query}`:""}`;
+ const r=await fetch(url,{cache:"no-store"});
  if(!r.ok) throw new Error(`${r.status} ${r.statusText}: ${path}`);
  return r.json();
 }
@@ -39,7 +43,7 @@ export function n(v:any,...keys:string[]):number|null{
 }
 export function s(v:any,...keys:string[]):string{
  for(const k of keys) if(v?.[k]!==undefined&&v?.[k]!==null&&String(v[k]).trim()) return String(v[k]);
- return "â€”";
+ return "—";
 }
 export function latest(v:any){
  const a=arr(v);
@@ -54,9 +58,10 @@ export function providerOptimizer(v:any){
  });
  return ranked[0]??latest(v);
 }
-export function money(x:number|null){return x==null?"â€”":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(x)}
-export function fmt(x:number|null,d=2){return x==null?"â€”":x.toFixed(d)}
+export function money(x:number|null){return x==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(x)}
+export function fmt(x:number|null,d=2){return x==null?"—":x.toFixed(d)}
 export function labelAction(x:any){
  return s(x,"intervention_type","type","name","action","catalog_name","intervention_name");
 }
+
 
