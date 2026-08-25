@@ -1,12 +1,19 @@
 from __future__ import annotations
+
 import os
 from pathlib import Path
 
+
 def _env_file() -> dict[str, str]:
-    p = Path(r"D:\HELIOS\.env")
-    if not p.exists():
+    candidates = [
+        Path(".env"),
+        Path(r"D:\HELIOS\.env"),  # legacy local workstation fallback
+    ]
+    p = next((candidate for candidate in candidates if candidate.exists()), None)
+    if p is None:
         return {}
-    out = {}
+
+    out: dict[str, str] = {}
     for raw in p.read_text(encoding="utf-8-sig").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -15,8 +22,10 @@ def _env_file() -> dict[str, str]:
         out[k.strip()] = v.strip().strip('"').strip("'")
     return out
 
+
 def _get(name: str, default: str) -> str:
     return os.getenv(name) or _env_file().get(name) or default
+
 
 def settings():
     return {
@@ -24,5 +33,5 @@ def settings():
         "model": _get("GEMMA_MODEL", "gemma-4-26B-A4B-it"),
         "fallback_model": _get("GEMMA_FALLBACK_MODEL", "gemma-4-12B-it"),
         "timeout_seconds": float(_get("GEMMA_TIMEOUT_SECONDS", "120")),
-        "enabled": _get("GEMMA_ENABLED", "true").lower() in {"1","true","yes","on"},
+        "enabled": _get("GEMMA_ENABLED", "true").lower() in {"1", "true", "yes", "on"},
     }
